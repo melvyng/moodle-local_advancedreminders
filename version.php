@@ -28,5 +28,5 @@ defined('MOODLE_INTERNAL') || die();
 $plugin->version   = 2019060700;
 $plugin->requires  = 2017111309;        // require Moodle 3.4.9 (Build: 20190513)
 $plugin->release   = '0.3.0';
-//$plugin->maturity  = MATURITY_RC;
+$plugin->maturity = MATURITY_STABLE;
 $plugin->component = 'local_advancedreminders'; 
