@@ -19,7 +19,7 @@
  *
  * @package    local_advancedreminders
  * @author     Rodrigo Devolder <rodrigodevolder@gmail.com>
- * @copyright  2019 INDES-IDB (https://indes.iadb.org)
+ * @copyright  2020 INDES-IDB (https://indes.iadb.org)
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -27,6 +27,7 @@ require_once($CFG->dirroot . '/local/advancedreminders/classes/class_advancedrem
 
 DEFINE('ADVANCEDREMINDERS_INACTIVITY', 0);
 DEFINE('ADVANCEDREMINDERS_ACTIVITIES', 1);
+DEFINE('ADVANCEDREMINDERS_NOCOMPLETION', 2);
 DEFINE('ADVANCEDREMINDERS_SEND_AS_NO_REPLY', 0);
 DEFINE('ADVANCEDREMINDERS_SEND_AS_ADMIN', 1);
 

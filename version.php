@@ -19,14 +19,14 @@
  *
  * @package    local_advancedreminders
  * @author     Rodrigo Devolder <rodrigodevolder@gmail.com>
- * @copyright  2019 INDES-IDB (https://indes.iadb.org)
+ * @copyright  2020 INDES-IDB (https://indes.iadb.org)
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2019060700;
-$plugin->requires  = 2017111309;        // require Moodle 3.4.9 (Build: 20190513)
-$plugin->release   = '0.3.0';
-$plugin->maturity = MATURITY_STABLE;
+$plugin->version   = 2020051100;
+$plugin->requires  = 2017111309;
+$plugin->release   = '1.0.1';
+//$plugin->maturity  = MATURITY_RC;
 $plugin->component = 'local_advancedreminders'; 

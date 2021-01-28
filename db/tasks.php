@@ -19,7 +19,7 @@
  *
  * @package    local_advancedreminders
  * @author     Rodrigo Devolder <rodrigodevolder@gmail.com>
- * @copyright  2019 INDES-IDB (https://indes.iadb.org)
+ * @copyright  2020 INDES-IDB (https://indes.iadb.org)
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 

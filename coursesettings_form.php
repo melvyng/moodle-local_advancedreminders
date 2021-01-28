@@ -19,7 +19,7 @@
  *
  * @package    local_advancedreminders
  * @author     Rodrigo Devolder <rodrigodevolder@gmail.com>
- * @copyright  2019 INDES-IDB (https://indes.iadb.org)
+ * @copyright  2020 INDES-IDB (https://indes.iadb.org)
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -34,7 +34,7 @@ class local_advancedreminders_coursesettings_edit_form extends moodleform {
         list($coursesettings) = $this->_customdata;
 
         //===================================
-		$mform->addElement('header', 'header', get_string('headercoursesettings', 'local_advancedreminders'));
+		$mform->addElement('header', 'headercoursesettings', get_string('headercoursesettings', 'local_advancedreminders'));
 
 		//Habilitar/Deshabilitar el plugin
         $mform->addElement('advcheckbox', 'courseenabled', get_string('courseenabled', 'local_advancedreminders'), get_string('courseenabled_help', 'local_advancedreminders'));
@@ -53,7 +53,8 @@ class local_advancedreminders_coursesettings_edit_form extends moodleform {
 		$mform->addElement('html', "<div style='margin-left: 265px;'>". get_string('allowedroles_help', 'local_advancedreminders') ."</div>");
 
 		//===================================
-		$mform->addElement('header', 'header', get_string('headerinactivitysettings', 'local_advancedreminders'));
+		$mform->addElement('header', 'headerinactivitysettings', get_string('headerinactivitysettings', 'local_advancedreminders'));
+		$mform->addElement('html', "<div style='margin-left: 265px;'>". get_string('inactivity_help', 'local_advancedreminders') ."</div><br />");
 
 		//Definición de cuántos días de inatitud se enviará email
         $mform->addElement('text', 'mininactivity', get_string('mininactivity', 'local_advancedreminders'));
@@ -74,7 +75,7 @@ class local_advancedreminders_coursesettings_edit_form extends moodleform {
         $mform->setDefault('textinactivity', '');
 
 		//===================================
-		$mform->addElement('header', 'header', get_string('headeractivitiessettings', 'local_advancedreminders'));
+		$mform->addElement('header', 'headeractivitiessettings', get_string('headeractivitiessettings', 'local_advancedreminders'));
 
 		//Fecha inicial para recordatorios de actividades
         $mform->addElement('text', 'minactivities', get_string('minactivities', 'local_advancedreminders'));
@@ -93,6 +94,27 @@ class local_advancedreminders_coursesettings_edit_form extends moodleform {
         $mform->setType('textactivities', PARAM_CLEANHTML);
 		$mform->addHelpButton('textactivities', 'textactivities', 'local_advancedreminders');
         $mform->setDefault('textactivities', '');
+
+        //===================================
+		$mform->addElement('header', 'headernocompletionsettings', get_string('headernocompletionsettings', 'local_advancedreminders'));
+
+		//Fecha inicial para recordatorios de actividades
+        $mform->addElement('text', 'minnocompletion', get_string('minnocompletion', 'local_advancedreminders'));
+        $mform->setType('minnocompletion', PARAM_INT);
+		$mform->addHelpButton('minnocompletion', 'minnocompletion', 'local_advancedreminders');
+        $mform->setDefault('minnocompletion', '7');
+
+		//Intervalo para recordatorios de actividades
+        $mform->addElement('text', 'intervalnocompletion', get_string('intervalnocompletion', 'local_advancedreminders'));
+        $mform->setType('intervalnocompletion', PARAM_INT);
+		$mform->addHelpButton('intervalnocompletion', 'intervalnocompletion', 'local_advancedreminders');
+        $mform->setDefault('intervalnocompletion', '7');
+
+		//Texto para recordatorios de actividades por idioma
+        $mform->addElement('textarea', 'textnocompletion', get_string('textnocompletion', 'local_advancedreminders'));
+        $mform->setType('textnocompletion', PARAM_CLEANHTML);
+		$mform->addHelpButton('textnocompletion', 'textnocompletion', 'local_advancedreminders');
+        $mform->setDefault('textnocompletion', '');
 
         //===================================
 		$mform->addElement('hidden', 'courseid');

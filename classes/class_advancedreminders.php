@@ -19,7 +19,7 @@
  *
  * @package    local_advancedreminders
  * @author     Rodrigo Devolder <rodrigodevolder@gmail.com>
- * @copyright  2019 INDES-IDB (https://indes.iadb.org)
+ * @copyright  2020 INDES-IDB (https://indes.iadb.org)
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -57,15 +57,15 @@ class class_advancedreminders {
 			$this->cron_course($coursesettings);
 		}
 
-		$this->set_log('<br />Finished.');
+		$this->set_log('Finished.');
     }
 
 	private function cron_course ($coursesettings) {
-		global $CFG, $DB;
+		global $DB;
 
 		$this->set_log("Start course {$coursesettings->courseid}");
 
-		$course = get_course($coursesettings->courseid);
+		$course = $DB->get_record('course', ['id' => $coursesettings->courseid]);
 		if(empty($course)) return $this->set_log('nonexistent course');
 		if(empty($course->visible)) return $this->set_log('invisible course');
 		if(empty($course->enablecompletion)) return $this->set_log('not enable completion on course');
@@ -79,24 +79,7 @@ class class_advancedreminders {
 			$user = $this->get_user($userid);
 			if(empty($user)) continue;
 
-			$lastaccess = $DB->get_field('user_lastaccess', 'timeaccess', ['courseid' => $coursesettings->courseid, 'userid' => $userid]);
-			if(empty($lastaccess)) $lastaccess = $this->get_min_date($course, $userid);
-
-			if($this->test && $this->loglevel == 1) {
-				echo "<br />userid = $userid<br />";
-				echo 'get_min_date = '. $this->get_min_date($course, $userid) .'<br />';
-				echo 'lastaccess = '. (empty($lastaccess) ? 'N/A' : $lastaccess) .'<br />';
-				echo 'c1 = '. (($this->now > $lastaccess + (86400 * $coursesettings->mininactivity)) ? 'y' : 'n') .'<br />';
-				echo 'c2 = '. ((empty($CFG->local_advancedreminders_maxinactivity) || $this->now < $lastaccess + (86400 * $CFG->local_advancedreminders_maxinactivity)) ? 'y' : 'n') .'<br />';
-			}
-
-			if(!$this->inactivity) {
-				$this->set_log('inactivity disabled', 1);
-
-			} elseif(
-				($this->now > $lastaccess + (86400 * $coursesettings->mininactivity)) &&
-				(empty($CFG->local_advancedreminders_maxinactivity) || $this->now < $lastaccess + (86400 * $CFG->local_advancedreminders_maxinactivity))
-			){
+			if($this->is_inactivity($course, $userid, $coursesettings)) {
 				$this->set_log('send_email inactivity', 1);
 				$this->send_email(ADVANCEDREMINDERS_INACTIVITY, $course, $userid, $coursesettings);
 				continue;
@@ -104,11 +87,16 @@ class class_advancedreminders {
 				$this->set_log('NOT inactivity', 1);
 			}
 
-			$activities_not_completed = $this->activities_not_completed($course, $userid, $coursesettings);
-			if(!empty($activities_not_completed)) {
+			list($html_activities, $html_nocompletion) = $this->activities_not_completed($course, $userid, $coursesettings);
+			if(!empty($html_activities)) {
 				$this->set_log('send_email activities', 1);
-				$this->send_email(ADVANCEDREMINDERS_ACTIVITIES, $course, $userid, $coursesettings, $activities_not_completed);
-			} else {
+				$this->send_email(ADVANCEDREMINDERS_ACTIVITIES, $course, $userid, $coursesettings, $html_activities);
+			}
+			if(!empty($html_nocompletion)) {
+				$this->set_log('send_email nocompletion', 1);
+				$this->send_email(ADVANCEDREMINDERS_NOCOMPLETION, $course, $userid, $coursesettings, $html_nocompletion);
+			}
+			if(empty($html_activities) && empty($html_nocompletion)) {
 				$this->set_log('NOT activities', 1);
 			}
 		}
@@ -161,13 +149,59 @@ class class_advancedreminders {
 		return $roles;
 	}
 
+	private function is_inactivity ($course, $userid, $coursesettings) {
+        global $CFG, $DB;
+
+		if(empty($coursesettings->mininactivity) || !is_numeric($coursesettings->mininactivity)) {
+			$this->set_log("mininactivity empty", 1);
+			return false;
+		}
+
+		$completion = new \completion_info($course);
+		$iscomplete = $completion->is_course_complete($userid);
+
+		$lastaccess = $DB->get_field('user_lastaccess', 'timeaccess', ['courseid' => $coursesettings->courseid, 'userid' => $userid]);
+		if(empty($lastaccess)) $lastaccess = $this->get_min_date($course, $userid);
+
+		if($this->test && $this->loglevel == 1) {
+			echo "<br />userid = $userid<br />";
+			echo 'get_min_date = '. $this->get_min_date($course, $userid) .'<br />';
+			echo 'lastaccess = '. (empty($lastaccess) ? 'N/A' : $lastaccess) .'<br />';
+			echo 'c1 = '. (($this->now > $lastaccess + (86400 * $coursesettings->mininactivity)) ? 'y' : 'n') .'<br />';
+			echo 'c2 = '. ((empty($CFG->local_advancedreminders_maxinactivity) || $this->now < $lastaccess + (86400 * $CFG->local_advancedreminders_maxinactivity)) ? 'y' : 'n') .'<br />';
+		}
+
+		if(!$this->inactivity) {
+			return false;
+
+		} elseif($iscomplete) {
+			$this->set_log('iscomplete', 1);
+			return false;
+
+		} else {
+			return ($this->now > $lastaccess + (86400 * $coursesettings->mininactivity)) &&
+				   (empty($CFG->local_advancedreminders_maxinactivity) || $this->now < $lastaccess + (86400 * $CFG->local_advancedreminders_maxinactivity));
+		}
+	}
+
 	private function activities_not_completed ($course, $userid, $coursesettings) {
         global $DB;
+
+		if( (empty($coursesettings->minactivities) && empty($coursesettings->minnocompletion)) ||
+			!is_numeric($coursesettings->minactivities) ||
+			!is_numeric($coursesettings->minnocompletion)
+		) {
+			$this->set_log("minactivities/minnocompletion empty {$coursesettings->minactivities}|{$coursesettings->minnocompletion}", 1);
+			return [null, null];
+		}
 
 		$completion = new \completion_info($course);
         $activities = $completion->get_activities();
 
-		$html = '';
+		$html_activities = '';
+		$html_nocompletion = '';
+		$mininiincomplete = 0;
+		$maxtimecomplete = 0;
         foreach($activities as $activity) {
             // Check if this activity is visible
             if(!$activity->visible || !$activity->uservisible) continue;
@@ -189,21 +223,37 @@ class class_advancedreminders {
 				$this->set_log("ini = get_min_date = $ini", 1);
 			}
 
-			if($this->now < $ini + (86400 * $coursesettings->minactivities)) continue;
-
-			$this->set_log('time ok', 1);
-
             // Get progress information and state
             $data = $completion->get_data($activity, false, $userid);
-			if($data->completionstate != COMPLETION_INCOMPLETE) continue;
+			if($data->completionstate != COMPLETION_INCOMPLETE) {
+				$maxtimecomplete = empty($maxtimecomplete) ? $data->timemodified : max($maxtimecomplete, $data->timemodified);
+				continue;
+			}
 
 			$this->set_log('has incomplete', 1);
+			$mininiincomplete = empty($mininiincomplete) ? $ini : min($mininiincomplete, $ini);
 
-			$html .= '<li>'. \html_writer::link($activity->url, "<b>{$activity->name}</b>") .'</li>';
+			if(!empty($coursesettings->minactivities) && $this->now > $ini + (86400 * $coursesettings->minactivities)) {
+				$this->set_log('time ok activities', 1);
+				$html_activities .= '<li>'. \html_writer::link($activity->url, "<b>{$activity->name}</b>") .'</li>';
+			}
+			if(!empty($coursesettings->minnocompletion) && $this->now > $ini + (86400 * $coursesettings->minnocompletion)) {
+				$this->set_log('time ok nocompletion', 1);
+				$html_nocompletion .= '<li>'. \html_writer::link($activity->url, "<b>{$activity->name}</b>") .'</li>';
+			}
 		}
-		if(!empty($html)) $html = "<ul>$html</ul>";
+		if(!empty($html_activities)) $html_activities = "<ul>$html_activities</ul>";
 
-		return $html;
+		if( !empty($html_nocompletion) &&
+			(empty($mininiincomplete) || $this->now > $mininiincomplete + (86400 * $coursesettings->minnocompletion)) &&
+			(empty($maxtimecomplete) || $this->now > $maxtimecomplete + (86400 * $coursesettings->minnocompletion))
+		) {
+			$html_nocompletion = "<ul>$html_nocompletion</ul>";
+		} else {
+			$html_nocompletion = '';
+		}
+
+		return [$html_activities, $html_nocompletion];
 	}
 
 	private function get_min_date ($course, $userid) {
@@ -237,40 +287,48 @@ class class_advancedreminders {
 	private function send_email ($type, $course, $userid, $coursesettings, $htmlrows = '') {
 		global $CFG, $DB;
 
-		$typestr = ['Inactivity', 'Activities'];
+		$typestr = ['Inactivity', 'Activities', 'NoCompletion'];
 		$user = $DB->get_record('user', ['id' => $userid]);
 		$ignoresent = optional_param('ignoresent', false, PARAM_BOOL);
 
 		//Verifica se o tempo minimo foi respeitado
-		$typessettings = [$coursesettings->mininactivity, $coursesettings->minactivities];
+		$typessettings = [$coursesettings->mininactivity, $coursesettings->minactivities, $coursesettings->minnocompletion];
 		$last_records = $DB->get_records('local_advancedreminders_se', ['courseid' => $course->id, 'userid' => $userid, 'type' => $type], 'time');
 		$last_row = array_pop($last_records);
 		if((!$this->test || !$ignoresent) && !empty($last_row->time) && $this->now < $last_row->time + (86400 * $typessettings[$type])) {
 			return $this->set_log("interval min not completed - type {$typestr[$type]} - user {$user->id} &lt;{$user->email}&gt;");
 		}
 
-		$typessettings = [$coursesettings->textinactivity, $coursesettings->textactivities];
+		$typessettings = [$coursesettings->textinactivity, $coursesettings->textactivities, $coursesettings->textnocompletion];
 		$arr_text = json_decode($typessettings[$type], true);
 		foreach($arr_text as $key => $value) {
-			if(empty(preg_replace('/\s/', '', strip_tags($value)))) unset($arr_text[$key]);
+			if(empty(preg_replace('/\s+/', '', $value))) unset($arr_text[$key]);
 		}
 
 		if(count($arr_text) == 1) {
 			$text = array_shift($arr_text);
+		} elseif(isset($arr_text[$user->lang])) {
+			$text = $arr_text[$user->lang];
 		} else {
-			if(isset($arr_text[$user->lang])) {
-				$text = $arr_text[$user->lang];
-			} else {
-				$text = array_shift($arr_text);
-			}
+			$text = array_shift($arr_text);
 		}
 
-		if(!empty($htmlrows)) {
-			$text = str_replace('=LIST=', $htmlrows, $text);
-			$text = str_replace('=USER=', fullname($user), $text);
-			$text = str_replace('=LINK=', "<a href='{$CFG->wwwroot}/course/view.php?id={$course->id}'>{$course->fullname}</a>", $text);
-			$text = str_replace('=COURSE=', $course->fullname, $text);
-		}
+		$body = isset($text['body']) ? $text['body'] : $text;
+		$body = rawurldecode($body);
+		$body = utf8_encode($body);
+
+		if(empty(preg_replace('/\s+/', '', $body))) return $this->set_log('empty body', 1);
+
+		$body = str_replace('=LIST=', $htmlrows, $body);
+		$body = str_replace('=USER=', fullname($user), $body);
+		$body = str_replace('=LINK=', "<a href='{$CFG->wwwroot}/course/view.php?id={$course->id}'>{$course->fullname}</a>", $body);
+		$body = str_replace('=COURSE=', $course->fullname, $body);
+
+		$title = isset($text['title']) ? $text['title'] : '';
+		$title = rawurldecode($title);
+		$title = utf8_encode($title);
+		$title = str_replace('=COURSE=', $course->fullname, $title);
+		if(empty($title)) $title = "[$subjectprefix] {$eventdata->name}";
 
 		$fromuser = \core_user::get_noreply_user();
 		if(isset($CFG->local_reminders_sendas) && $CFG->local_reminders_sendas == ADVANCEDREMINDERS_SEND_AS_ADMIN) {
@@ -289,8 +347,8 @@ class class_advancedreminders {
 		if($this->test) {
 			echo "<style>.advancedreminders_test{border:2px solid #808080;margin:10px 0;}.advancedreminders_email{padding:10px;}.advancedreminders_footer{padding:10px;background-color:#e6e6e6;}</style>";
 			echo "<div class='advancedreminders_test'>";
-			echo "<div class='advancedreminders_footer'><u><b>Email would be sent</b></u><br />User: {$user->id} &lt;{$user->email}&gt;<br />Type: {$typestr[$type]}</div>";
-			echo "<div class='advancedreminders_email'>$text</div>";
+			echo "<div class='advancedreminders_footer'><u><b>Email would be sent</b></u><br />User: {$user->id} &lt;{$user->email}&gt;<br />Type: {$typestr[$type]}<br />Subject: $title</div>";
+			echo "<div class='advancedreminders_email'>$body</div>";
 			echo "</div>";
 		} else {
 
@@ -299,17 +357,17 @@ class class_advancedreminders {
 			$eventdata->name              = 'local_advancedreminders';
 			$eventdata->userfrom          = $fromuser;
 			$eventdata->userto            = $userid;
-			$eventdata->subject           = "[$subjectprefix] {$eventdata->name}";
-			$eventdata->fullmessage       = strip_tags($text);
+			$eventdata->subject           = $title;
+			$eventdata->fullmessage       = $body;
 			$eventdata->fullmessageformat = FORMAT_HTML;
-			$eventdata->fullmessagehtml   = $text;
-			$eventdata->smallmessage      = "{$eventdata->name} - $text";
+			$eventdata->fullmessagehtml   = $body;
+			$eventdata->smallmessage      = "$title - $body";
 			$eventdata->notification      = 1;
 
 			$mailresult = message_send($eventdata);
 			$this->set_log("Mail Result: $mailresult");
 
-			//email_to_user($user, $fromuser, $subjectprefix, $text, $text);
+			//email_to_user($user, $fromuser, $subjectprefix, $body, $body);
 
 			$this->insert_sent_emails($course->id, $userid, $type);
 		}

@@ -25,37 +25,36 @@
 
 require_once('../../config.php');
 
-$url = new moodle_url('/local/advancedreminders/test.php');
-$PAGE->set_url($url);
-
 require_login();
-
 require_capability('moodle/site:config', context_system::instance());
 
-$section = 'local_advancedreminders';
-$strheading = get_string('admincrontest', 'local_advancedreminders');
+$paramsesskey = optional_param('sesskey', null, PARAM_RAW);
+$strheading = get_string('cron', 'admin');
 $pluginname = get_string('pluginname', 'local_advancedreminders');
+$runcron = get_string('runcron', 'local_advancedreminders');
+$sureruncron = get_string('sureruncron', 'local_advancedreminders');
+$sesskey = sesskey();
 
 $PAGE->set_context(context_system::instance());
-$PAGE->set_url('/admin/settings.php', array('section' => $section));
-$PAGE->set_pagetype("admin-setting-$section");
-$PAGE->set_pagelayout('admin');
-$PAGE->navigation->clear_cache();
-$PAGE->navbar->add($strheading);
-if(isset($SITE->fullname)) $PAGE->set_heading($SITE->fullname);
+$PAGE->set_url('/local/advancedreminders/cron.php');
 $PAGE->set_title($strheading);
-navigation_node::require_admin_tree();
 
-$returl = new moodle_url('/admin/settings.php', array('section' => $section));
+echo "<h2>$pluginname - $strheading</h2><br />";
 
-echo $OUTPUT->header();
+if(empty($paramsesskey) || $paramsesskey !== $sesskey) {
+	echo <<<EOF
+<h3>$sureruncron</h3>
+<form action="{$CFG->wwwroot}/local/advancedreminders/cron.php" method="POST">
+    <input type="hidden" name='sesskey' value='$sesskey' />
+	<input type="submit" value="$runcron" />
+</form>
+EOF;
 
-echo "<h2>$pluginname - $strheading</h2>";
+} else {
+	echo "<pre>";
 
-$class_advancedreminders = new \local_advancedreminders\class_advancedreminders();
-$class_advancedreminders->test = true;
-$class_advancedreminders->cron();
+	$class_advancedreminders = new \local_advancedreminders\class_advancedreminders();
+	$class_advancedreminders->cron();
 
-echo "<br /><br />";
-echo $class_advancedreminders->back_button($returl);
-echo $OUTPUT->footer();
+	echo "</pre><br /><br />";
+}

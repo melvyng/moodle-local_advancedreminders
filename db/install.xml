@@ -16,6 +16,9 @@
 		<FIELD NAME="minactivities" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" />
 		<FIELD NAME="intervalactivities" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" />
         <FIELD NAME="textactivities" TYPE="text" NOTNULL="false" SEQUENCE="false" />
+		<FIELD NAME="minnocompletion" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" />
+		<FIELD NAME="intervalnocompletion" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" />
+        <FIELD NAME="textnocompletion" TYPE="text" NOTNULL="false" SEQUENCE="false" />
         <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" />
 	  </FIELDS>
       <KEYS>

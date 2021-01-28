@@ -19,7 +19,7 @@
  *
  * @package    local_advancedreminders
  * @author     Rodrigo Devolder <rodrigodevolder@gmail.com>
- * @copyright  2019 INDES-IDB (https://indes.iadb.org)
+ * @copyright  2020 INDES-IDB (https://indes.iadb.org)
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -41,15 +41,26 @@ class dynamic_atto_texteditor extends atto_texteditor {
             ), 'editor_atto');
         $PAGE->requires->strings_for_js(array(
                 'warning',
-                'info'
+                'info',
+				'delete'
             ), 'moodle');
+        $PAGE->requires->strings_for_js(array(
+                'privacy:metadata:messages:subject'
+            ), 'message');
+			
 
 		list($modules, $arguments) = $this->dynamic_use_editor('=ELEMENTID=', []);
+
+		$arr = get_string_manager()->get_list_of_translations();
+		$langs = [];
+		foreach($arr as $key => $value) {
+			$langs[$key] = substr($value, 0, strpos($value, '(') - 4);
+		}
 
 		$str_map = join(',', array_map('json_encode', convert_to_array($modules)));
 		$str_call = preg_replace('/[\n\r\t]+/', '', str_replace('"=ELEMENTID="', 'elementid', js_writer::function_call('Y.M.editor_atto.Editor.init', [$arguments])));
 
-        $PAGE->requires->js_amd_inline("require(['local_advancedreminders/main'],function(amd){amd.init(function(elementid){Y.use( $str_map, function(){ $str_call });});});");
+        $PAGE->requires->js_amd_inline("require(['local_advancedreminders/main'],function(amd){amd.init(function(elementid){Y.use( $str_map, function(){ $str_call });}, ". json_encode($langs) .");});");
     }
 
     /**
